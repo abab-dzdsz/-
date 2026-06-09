@@ -378,7 +378,7 @@ class Game:
         self.border_turtle.clear()
         self.grid_turtle.clear()
 
-def show_main_menu(self):
+    def show_main_menu(self):
         """显示主菜单"""
         self.clear_buttons()
         self.clear_game_objects()
@@ -567,7 +567,7 @@ def show_main_menu(self):
         
         self.screen.update()
 
-def start_level(self, level_num):
+    def start_level(self, level_num):
         """开始指定关卡"""
         self.clear_buttons()
         self.clear_all_turtles()
@@ -733,7 +733,8 @@ def start_level(self, level_num):
                 
                 self.create_obstacle(x, y, grid_width, grid_height)
                 break
-def show_game_ui(self):
+
+    def show_game_ui(self):
         """显示游戏界面UI"""
         self.score_pen.goto(0, SCREEN_HEIGHT//2 + 30)
         self.update_score_display()
@@ -800,7 +801,8 @@ def show_game_ui(self):
     def exit_game(self):
         """退出游戏"""
         self.screen.bye()
-def start_game(self):
+
+    def start_game(self):
         """开始游戏（带按键反馈）"""
         if self.waiting_for_start:
             self.waiting_for_start = False
@@ -960,7 +962,7 @@ def start_game(self):
         self.fail_reason_pen.color("#FFFFFF")
         self.fail_reason_pen.write("按 R 键重玩 | 按 Esc 返回菜单", align="center", font=("微软雅黑", 14, "normal"))
 
-def update(self):
+    def update(self):
         """更新游戏状态"""
         if not self.game_over and not self.paused and not self.waiting_for_start and not self.level_complete:
             # 处理倒计时（限时挑战关卡）

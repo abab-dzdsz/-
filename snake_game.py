@@ -566,3 +566,170 @@ def show_main_menu(self):
                 self.menu_buttons.append(locked_label)
         
         self.screen.update()
+
+def start_level(self, level_num):
+        """开始指定关卡"""
+        self.clear_buttons()
+        self.clear_all_turtles()
+        self.game_mode = "level"
+        self.current_level = level_num
+        level = self.levels[level_num]
+        
+        # 初始化游戏对象
+        grid_width = level["grid_width"]
+        grid_height = level["grid_height"]
+        self.init_game_objects(grid_width, grid_height)
+        
+        # 生成障碍物
+        if level.get("random_obstacles"):
+            self.generate_random_obstacles(grid_width, grid_height)
+        else:
+            for obs in level["obstacles"]:
+                self.create_obstacle(obs[0], obs[1], grid_width, grid_height)
+        
+        # 设置速度
+        self.speed_multiplier = level["speed_multiplier"]
+        
+        # 设置时间限制
+        self.time_limit = level.get("time_limit", 0)
+        self.time_left = self.time_limit
+        
+        # 等待用户按键开始
+        self.waiting_for_start = True
+        self.show_game_ui()
+    
+    def init_game_objects(self, grid_width, grid_height):
+        """初始化游戏对象"""
+        # 清除旧对象
+        if self.snake:
+            self.snake.clear()
+        if self.food:
+            self.food.clear()
+        for t in self.obstacle_turtles:
+            t.hideturtle()
+        self.obstacle_turtles = []
+        
+        # 重置状态
+        self.score = 0
+        self.game_over = False
+        self.paused = False
+        self.level_complete = False
+        self.waiting_for_start = True
+        self.speed_multiplier = 1.0
+        self.last_speed_increase = 0
+        self.rainbow_mode = False
+        self.current_obstacles = []  # 重置当前障碍物列表
+        self.time_left = 0  # 剩余时间（秒）
+        self.start_time = 0  # 游戏开始时间
+        
+        # 保存当前地图大小
+        self.current_grid_width = grid_width
+        self.current_grid_height = grid_height
+        
+        # 绘制边界和网格
+        self.draw_game_border(grid_width, grid_height)
+        self.draw_game_grid(grid_width, grid_height)
+        
+        # 创建蛇和食物
+        self.snake = Snake(self.screen, grid_width, grid_height)
+        self.food = Food(self.screen, grid_width, grid_height)
+        self.food.generate_new(self.snake.body, [], margin=4)
+        
+        # 创建游戏按钮
+        self.create_game_buttons()
+        
+        # 更新显示
+        self.update_score_display()
+    
+    def draw_game_border(self, grid_width, grid_height):
+        """绘制游戏边界"""
+        width = grid_width * GRID_SIZE
+        height = grid_height * GRID_SIZE
+        
+        self.border_turtle.clear()
+        self.border_turtle.speed(0)
+        self.border_turtle.color(BORDER_COLOR)
+        self.border_turtle.pensize(3)
+        self.border_turtle.penup()
+        self.border_turtle.goto(-width//2 - 2, -height//2 - 2)
+        self.border_turtle.pendown()
+        
+        for _ in range(4):
+            self.border_turtle.forward(width + 4)
+            self.border_turtle.left(90)
+        
+        self.border_turtle.hideturtle()
+    
+    def draw_game_grid(self, grid_width, grid_height):
+        """绘制游戏网格"""
+        width = grid_width * GRID_SIZE
+        height = grid_height * GRID_SIZE
+        
+        self.grid_turtle.clear()
+        self.grid_turtle.speed(0)
+        self.grid_turtle.color(GRID_COLOR)
+        self.grid_turtle.pensize(1)
+        self.grid_turtle.penup()
+        
+        for x in range(-width//2, width//2 + 1, GRID_SIZE):
+            self.grid_turtle.goto(x, -height//2)
+            self.grid_turtle.pendown()
+            self.grid_turtle.goto(x, height//2)
+            self.grid_turtle.penup()
+        
+        for y in range(-height//2, height//2 + 1, GRID_SIZE):
+            self.grid_turtle.goto(-width//2, y)
+            self.grid_turtle.pendown()
+            self.grid_turtle.goto(width//2, y)
+            self.grid_turtle.penup()
+        
+        self.grid_turtle.hideturtle()
+    
+    def create_obstacle(self, x, y, grid_width, grid_height):
+        """创建障碍物"""
+        t = turtle.Turtle()
+        t.speed(0)
+        t.shape("square")
+        t.color("#5D6D7E")
+        t.penup()
+        t.shapesize(0.9, 0.9)
+        
+        t.goto(x * GRID_SIZE - grid_width * GRID_SIZE // 2 + GRID_SIZE // 2,
+               y * GRID_SIZE - grid_height * GRID_SIZE // 2 + GRID_SIZE // 2)
+        
+        self.obstacle_turtles.append(t)
+        # 不再修改原始关卡数据，避免重复添加
+        # 将障碍物位置存储在单独的列表中
+        if not hasattr(self, 'current_obstacles'):
+            self.current_obstacles = []
+        self.current_obstacles.append((x, y))
+    
+    def generate_random_obstacles(self, grid_width, grid_height):
+        """生成随机障碍物（不在蛇头附近生成）"""
+        num_obstacles = random.randint(20, 30)
+        margin = 6
+        
+        # 获取蛇头位置
+        head_pos = self.snake.body[0]
+        
+        for _ in range(num_obstacles):
+            while True:
+                x = random.randint(margin, grid_width - 1 - margin)
+                y = random.randint(margin, grid_height - 1 - margin)
+                pos = (x, y)
+                
+                # 检查是否与蛇身重叠
+                if pos in self.snake.body:
+                    continue
+                
+                # 检查是否与已生成的障碍物重叠
+                if pos in self.current_obstacles:
+                    continue
+                
+                # 检查是否在蛇头附近（3格范围内）
+                head_x, head_y = head_pos
+                if abs(x - head_x) <= 3 and abs(y - head_y) <= 3:
+                    continue
+                
+                self.create_obstacle(x, y, grid_width, grid_height)
+                break

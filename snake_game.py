@@ -959,4 +959,91 @@ def start_game(self):
         self.fail_reason_pen.clear()
         self.fail_reason_pen.color("#FFFFFF")
         self.fail_reason_pen.write("按 R 键重玩 | 按 Esc 返回菜单", align="center", font=("微软雅黑", 14, "normal"))
+
+def update(self):
+        """更新游戏状态"""
+        if not self.game_over and not self.paused and not self.waiting_for_start and not self.level_complete:
+            # 处理倒计时（限时挑战关卡）
+            if self.game_mode == "level" and self.time_limit > 0:
+                elapsed = time.time() - self.start_time
+                self.time_left = max(0, self.time_limit - int(elapsed))
+                
+                # 检查时间是否耗尽
+                if self.time_left <= 0:
+                    self.game_over = True
+                    self.show_fail_reason("时间耗尽 - 游戏失败！")
+                    return
+            
+            if self.snake.check_wall_collision():
+                self.game_over = True
+                self.show_fail_reason("头部碰墙 - 游戏失败！")
+            else:
+                self.snake.move()
+                self.check_collisions()
+        
+        if self.rainbow_mode and not self.game_over and not self.paused:
+            self.snake.update_rainbow_colors()
     
+    def draw(self):
+        """绘制游戏画面"""
+        if self.snake and self.food:
+            if not self.waiting_for_start:
+                self.status_pen.clear()
+                # 显示关卡信息（包含倒计时）
+                if self.game_mode == "level":
+                    level = self.levels[self.current_level]
+                    status_text = f"{level['name']} | 目标: {level['target_score']}分"
+                    # 如果有限时，显示倒计时
+                    if self.time_limit > 0:
+                        # 时间少于10秒时用红色显示
+                        time_color = "#E74C3C" if self.time_left <= 10 else "#FFFFFF"
+                        self.status_pen.color(time_color)
+                        status_text += f" | ⏱️ {self.time_left}秒"
+                    else:
+                        self.status_pen.color("#FFFFFF")
+                    self.status_pen.write(status_text, align="center", font=("微软雅黑", 16, "bold"))
+            
+            self.snake.draw()
+            self.food.draw()
+            
+            if self.paused and not self.game_over:
+                self.show_status("⏸️ 游戏暂停 - 按 P 键继续")
+            if self.game_over:
+                self.show_status("💀 游戏结束！按 R 键重新开始")
+        
+        self.screen.update()
+    
+    def reset_game(self):
+        """重置游戏"""
+        if self.game_mode == "level":
+            self.start_level(self.current_level)
+        else:
+            self.start_endless_mode()
+    
+    def run(self):
+        """游戏主循环（优化按键响应和速度控制）"""
+        last_update_time = time.time()
+        
+        while True:
+            # 多次调用 listen() 确保按键响应灵敏
+            self.screen.listen()
+            
+            current_time = time.time()
+            
+            if self.game_mode in ["endless", "level"]:
+                # 计算更新间隔（基于速度）
+                update_interval = self.base_speed / self.speed_multiplier
+                
+                # 只有当时间间隔达到时才更新游戏状态
+                if current_time - last_update_time >= update_interval:
+                    self.update()
+                    self.draw()
+                    last_update_time = current_time
+            
+            # 使用更短的睡眠时间提高响应速度
+            time.sleep(0.01)
+            self.screen.update()
+
+
+if __name__ == "__main__":
+    game = Game()

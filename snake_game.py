@@ -800,3 +800,119 @@ def show_game_ui(self):
     def exit_game(self):
         """退出游戏"""
         self.screen.bye()
+def start_game(self):
+        """开始游戏（带按键反馈）"""
+        if self.waiting_for_start:
+            self.waiting_for_start = False
+            # 记录游戏开始时间（用于倒计时）
+            self.start_time = time.time()
+            # 显示按键反馈
+            self.show_start_feedback()
+    
+    def show_start_feedback(self):
+        """显示开始反馈效果"""
+        feedback = turtle.Turtle()
+        feedback.speed(0)
+        feedback.color("#2ECC71")
+        feedback.penup()
+        feedback.hideturtle()
+        feedback.goto(0, 0)
+        feedback.write("🚀 开始！", align="center", font=("微软雅黑", 32, "bold"))
+        
+        # 1秒后消失
+        def hide_feedback():
+            feedback.clear()
+        self.screen.ontimer(hide_feedback, 500)
+    
+    def go_up(self):
+        """向上移动"""
+        if self.snake:
+            self.snake.update_direction(UP)
+    
+    def go_down(self):
+        """向下移动"""
+        if self.snake:
+            self.snake.update_direction(DOWN)
+    
+    def go_left(self):
+        """向左移动"""
+        if self.snake:
+            self.snake.update_direction(LEFT)
+    
+    def go_right(self):
+        """向右移动"""
+        if self.snake:
+            self.snake.update_direction(RIGHT)
+    
+    def toggle_pause(self):
+        """切换暂停状态"""
+        if not self.game_over and not self.waiting_for_start:
+            self.paused = not self.paused
+            if self.pause_btn:
+                self.pause_btn.config(text="继续" if self.paused else "暂停")
+    
+    def update_score_display(self):
+        """更新分数显示"""
+        self.score_pen.clear()
+        self.score_pen.write(f"🎯 分数: {self.score}", align="center", font=("微软雅黑", 22, "bold"))
+    
+    def show_start_message(self):
+        """显示开始提示"""
+        self.status_pen.clear()
+        self.status_pen.color(STATUS_COLOR)
+        self.status_pen.write("按 Enter 或 空格键 开始游戏", align="center", font=("微软雅黑", 18, "normal"))
+    
+    def show_fail_reason(self, reason):
+        """显示失败原因"""
+        self.fail_reason_pen.clear()
+        self.fail_reason_pen.write(reason, align="center", font=("微软雅黑", 16, "bold"))
+    
+    def show_status(self, message):
+        """显示游戏状态信息"""
+        self.status_pen.clear()
+        self.status_pen.color(STATUS_COLOR)
+        self.status_pen.write(message, align="center", font=("微软雅黑", 16, "normal"))
+    
+    def check_collisions(self):
+        """检查碰撞"""
+        head = self.snake.body[0]
+        
+        # 检查食物碰撞
+        if head == self.food.position:
+            self.score += 10
+            self.snake.grow()
+            self.update_score_display()
+            
+            # 无尽模式变色和加速
+            if self.game_mode == "endless":
+                self.update_snake_color()
+            
+            # 关卡模式检查目标
+            if self.game_mode == "level":
+                level = self.levels[self.current_level]
+                if self.score >= level["target_score"]:
+                    self.level_complete = True
+                    self.show_level_complete()
+                    return
+            
+            # 生成新食物
+            obstacles = self.levels.get(self.current_level, {}).get("obstacles", [])
+            while self.food.position in self.snake.body or self.food.position in obstacles:
+                self.food.generate_new(self.snake.body, obstacles, margin=4)
+        
+        # 检查自身碰撞
+        if self.snake.check_self_collision():
+            self.game_over = True
+            self.show_fail_reason("头尾相触 - 游戏失败！")
+        
+        # 检查障碍物碰撞（关卡模式）
+        if self.game_mode == "level":
+            # 获取所有障碍物：包括关卡定义的和当前生成的
+            obstacles = self.levels.get(self.current_level, {}).get("obstacles", [])
+            # 添加当前游戏中的障碍物（随机生成的）
+            if hasattr(self, 'current_obstacles'):
+                obstacles += self.current_obstacles
+            
+            if self.snake.check_obstacle_collision(obstacles):
+                self.game_over = True
+                self.show_fail_reason("碰到障碍物 - 游戏失败！")

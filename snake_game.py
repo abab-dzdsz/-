@@ -178,3 +178,202 @@ class Food:
     
     def clear(self):
         self.food_turtle.hideturtle()
+
+class Game:
+    """游戏主类"""
+    
+    def __init__(self):
+        self.game_mode = None
+        self.current_level = 0
+        
+        # 关卡数据定义（增大地图尺寸，下调速度）
+        self.levels = {
+            1: {
+                "name": "🟢 新手训练营",
+                "grid_width": 20,
+                "grid_height": 20,
+                "speed_multiplier": 0.6,  # 下调速度
+                "target_score": 100,
+                "obstacles": [],
+                "time_limit": 0,
+                "description": "熟悉操作，轻松入门"
+            },
+            2: {
+                "name": "🟡 迷宫探险",
+                "grid_width": 24,
+                "grid_height": 24,
+                "speed_multiplier": 0.75,  # 下调速度
+                "target_score": 150,
+                "obstacles": [(6, 6), (6, 7), (6, 8), (17, 17), (17, 18), (17, 19),
+                              (12, 10), (13, 10), (14, 10), (5, 18), (6, 18), (7, 18)],
+                "time_limit": 0,
+                "description": "绕过障碍，到达终点"
+            },
+            3: {
+                "name": "🔵 限时挑战",
+                "grid_width": 24,
+                "grid_height": 24,
+                "speed_multiplier": 0.9,  # 下调速度
+                "target_score": 120,
+                "obstacles": [],
+                "time_limit": 45,
+                "description": "时间紧迫，快速反应"
+            },
+            4: {
+                "name": "🔴 终极考验",
+                "grid_width": 26,
+                "grid_height": 26,
+                "speed_multiplier": 1.0,  # 下调速度
+                "target_score": 200,
+                "obstacles": [],
+                "random_obstacles": True,
+                "time_limit": 0,
+                "description": "极速挑战，躲避障碍"
+            }
+        }
+        
+        # 加载进度
+        self.unlocked_levels = self.load_progress()
+        
+        # 创建屏幕
+        self.screen = turtle.Screen()
+        self.screen.title("贪吃蛇游戏 🐍")
+        self.screen.setup(width=SCREEN_WIDTH + 200, height=SCREEN_HEIGHT + 150)
+        self.screen.bgcolor(BG_COLOR)
+        self.screen.tracer(0)
+        
+        # 创建海龟对象
+        self.border_turtle = turtle.Turtle()
+        self.grid_turtle = turtle.Turtle()
+        self.snake = None
+        self.food = None
+        self.obstacle_turtles = []
+        
+        # 游戏状态
+        self.score = 0
+        self.game_over = False
+        self.paused = False
+        self.level_complete = False
+        self.waiting_for_start = True
+        
+        # 速度控制
+        self.base_speed = 0.08
+        self.speed_multiplier = 1.0
+        self.max_speed_multiplier = 2.5
+        self.last_speed_increase = 0
+        
+        # 彩虹变色控制
+        self.rainbow_mode = False
+        
+        # 创建显示对象
+        self.score_pen = turtle.Turtle()
+        self.score_pen.speed(0)
+        self.score_pen.color(SCORE_COLOR)
+        self.score_pen.penup()
+        self.score_pen.hideturtle()
+        
+        self.status_pen = turtle.Turtle()
+        self.status_pen.speed(0)
+        self.status_pen.color(STATUS_COLOR)
+        self.status_pen.penup()
+        self.status_pen.hideturtle()
+        
+        self.fail_reason_pen = turtle.Turtle()
+        self.fail_reason_pen.speed(0)
+        self.fail_reason_pen.color(FAIL_COLOR)
+        self.fail_reason_pen.penup()
+        self.fail_reason_pen.hideturtle()
+        
+        # tkinter 按钮
+        self.menu_buttons = []
+        self.game_buttons = []
+        
+        # 创建主菜单
+        self.show_main_menu()
+        
+        # 绑定键盘事件
+        self.setup_keybindings()
+        
+        # 游戏循环
+        self.run()
+    
+    def load_progress(self):
+        try:
+            if os.path.exists("snake_progress.json"):
+                with open("snake_progress.json", "r") as f:
+                    data = json.load(f)
+                    return data.get("unlocked_levels", [1])
+        except:
+            pass
+        return [1]
+    
+    def save_progress(self):
+        with open("snake_progress.json", "w") as f:
+            json.dump({"unlocked_levels": self.unlocked_levels}, f)
+    
+    def setup_keybindings(self):
+        self.screen.listen()
+        self.screen.onkeypress(self.go_up, "Up")
+        self.screen.onkeypress(self.go_down, "Down")
+        self.screen.onkeypress(self.go_left, "Left")
+        self.screen.onkeypress(self.go_right, "Right")
+        self.screen.onkeypress(self.start_game, "Return")
+        self.screen.onkeypress(self.start_game, "space")
+        self.screen.onkeypress(self.toggle_pause, "p")
+        self.screen.onkeypress(self.toggle_pause, "P")
+        self.screen.onkeypress(self.toggle_pause, "1")
+        self.screen.onkeypress(self.reset_game, "r")
+        self.screen.onkeypress(self.reset_game, "R")
+        self.screen.onkeypress(self.reset_game, "2")
+        self.screen.onkeypress(self.show_main_menu, "Escape")
+        self.screen.listen()
+    
+    def clear_all_turtles(self):
+        """清除所有海龟文字和图形"""
+        for t in turtle.turtles():
+            t.clear()
+            t.hideturtle()
+        
+        # 重新创建必要的海龟
+        self.border_turtle = turtle.Turtle()
+        self.grid_turtle = turtle.Turtle()
+        
+        self.score_pen = turtle.Turtle()
+        self.score_pen.speed(0)
+        self.score_pen.color(SCORE_COLOR)
+        self.score_pen.penup()
+        self.score_pen.hideturtle()
+        
+        self.status_pen = turtle.Turtle()
+        self.status_pen.speed(0)
+        self.status_pen.color(STATUS_COLOR)
+        self.status_pen.penup()
+        self.status_pen.hideturtle()
+        
+        self.fail_reason_pen = turtle.Turtle()
+        self.fail_reason_pen.speed(0)
+        self.fail_reason_pen.color(FAIL_COLOR)
+        self.fail_reason_pen.penup()
+        self.fail_reason_pen.hideturtle()
+    
+    def clear_buttons(self):
+        for button in self.menu_buttons + self.game_buttons:
+            try:
+                button.destroy()
+            except:
+                pass
+        self.menu_buttons = []
+        self.game_buttons = []
+    
+    def clear_game_objects(self):
+        if self.snake:
+            self.snake.clear()
+            self.snake = None
+        if self.food:
+            self.food.clear()
+            self.food = None
+        for t in self.obstacle_turtles:
+            t.hideturtle()
+        self.obstacle_turtles = []
+        self.border_turtle.clear()
+        self.grid_turtle.clear()

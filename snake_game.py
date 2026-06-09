@@ -733,3 +733,70 @@ def start_level(self, level_num):
                 
                 self.create_obstacle(x, y, grid_width, grid_height)
                 break
+def show_game_ui(self):
+        """显示游戏界面UI"""
+        self.score_pen.goto(0, SCREEN_HEIGHT//2 + 30)
+        self.update_score_display()
+        
+        if self.game_mode == "level":
+            level = self.levels[self.current_level]
+            self.status_pen.goto(0, SCREEN_HEIGHT//2 + 60)
+            self.status_pen.clear()
+            self.status_pen.color("#FFFFFF")
+            self.status_pen.write(f"{level['name']} | 目标: {level['target_score']}分", align="center", font=("微软雅黑", 16, "bold"))
+        elif self.game_mode == "endless":
+            self.status_pen.goto(0, SCREEN_HEIGHT//2 + 60)
+            self.status_pen.clear()
+            self.status_pen.color("#FFFFFF")
+            self.status_pen.write("🎯 无尽模式", align="center", font=("微软雅黑", 16, "bold"))
+        
+        self.show_start_message()
+        self.draw_key_hints()
+    
+    def create_game_buttons(self):
+        """创建游戏界面按钮"""
+        self.clear_buttons()
+        
+        canvas = self.screen.getcanvas()
+        root = canvas.winfo_toplevel()
+        
+        button_x = SCREEN_WIDTH // 2 + 80
+        
+        # 返回菜单按钮
+        menu_btn = tk.Button(root, text="← 菜单", bg="#7F8C8D", fg="white",
+                            font=("微软雅黑", 12, "bold"), width=10, height=1,
+                            command=self.show_main_menu)
+        canvas.create_window(button_x, 100, window=menu_btn)
+        self.game_buttons.append(menu_btn)
+        
+        # 暂停按钮
+        self.pause_btn = tk.Button(root, text="暂停", bg="#F39C12", fg="white",
+                                  font=("微软雅黑", 12, "bold"), width=10, height=1,
+                                  command=self.toggle_pause)
+        canvas.create_window(button_x, 50, window=self.pause_btn)
+        self.game_buttons.append(self.pause_btn)
+        
+        # 重新开始按钮
+        reset_btn = tk.Button(root, text="重新开始", bg="#E74C3C", fg="white",
+                             font=("微软雅黑", 12, "bold"), width=10, height=1,
+                             command=self.reset_game)
+        canvas.create_window(button_x, 0, window=reset_btn)
+        self.game_buttons.append(reset_btn)
+    
+    def draw_key_hints(self):
+        """绘制按键提示"""
+        hint = turtle.Turtle()
+        hint.speed(0)
+        hint.color("#BDC3C7")
+        hint.penup()
+        hint.hideturtle()
+        hint.goto(-SCREEN_WIDTH//2 + 10, -SCREEN_HEIGHT//2 - 35)
+        
+        if self.game_mode == "level":
+            hint.write("↑↓←→移动 | P暂停 | R重开 | Esc返回菜单 | 碰到障碍物游戏结束", align="left", font=("微软雅黑", 10, "normal"))
+        else:
+            hint.write("↑↓←→移动 | P暂停 | R重开 | Esc返回菜单", align="left", font=("微软雅黑", 10, "normal"))
+    
+    def exit_game(self):
+        """退出游戏"""
+        self.screen.bye()

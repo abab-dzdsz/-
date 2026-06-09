@@ -916,3 +916,47 @@ def start_game(self):
             if self.snake.check_obstacle_collision(obstacles):
                 self.game_over = True
                 self.show_fail_reason("碰到障碍物 - 游戏失败！")
+    def update_snake_color(self):
+        """根据分数更新蛇的颜色（无尽模式）"""
+        colors = {
+            0: ("#FFFFFF", "#CCCCCC"),      # 白色
+            20: ("#2ECC71", "#58D68D"),     # 绿色
+            50: ("#3498DB", "#5DADE2"),     # 蓝色
+            90: ("#9B59B6", "#BB8FCE"),     # 紫色
+            140: ("#F1C40F", "#F4D03F"),    # 金色
+            200: ("#E74C3C", "#EC7063")     # 红色
+        }
+        
+        # 检查彩虹模式（300分）
+        if self.score >= 300:
+            self.rainbow_mode = True
+            self.snake.update_rainbow_colors()
+        else:
+            self.rainbow_mode = False
+            current_color = colors[0]
+            for threshold in sorted(colors.keys()):
+                if self.score >= threshold:
+                    current_color = colors[threshold]
+            self.snake.update_color(current_color[0], current_color[1])
+            
+            # 加速
+            if self.score <= 300:
+                current_segment = sum(1 for t in sorted(colors.keys()) if self.score >= t)
+                if current_segment > self.last_speed_increase:
+                    self.speed_multiplier = min(self.speed_multiplier + 0.1, self.max_speed_multiplier)
+                    self.last_speed_increase = current_segment
+    
+    def show_level_complete(self):
+        """显示关卡完成"""
+        if self.current_level < 4 and (self.current_level + 1) not in self.unlocked_levels:
+            self.unlocked_levels.append(self.current_level + 1)
+            self.save_progress()
+        
+        self.status_pen.clear()
+        self.status_pen.color("#2ECC71")
+        self.status_pen.write(f"🎉 恭喜通关！得分: {self.score}", align="center", font=("微软雅黑", 24, "bold"))
+        
+        self.fail_reason_pen.clear()
+        self.fail_reason_pen.color("#FFFFFF")
+        self.fail_reason_pen.write("按 R 键重玩 | 按 Esc 返回菜单", align="center", font=("微软雅黑", 14, "normal"))
+    

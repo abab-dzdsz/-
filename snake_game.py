@@ -377,3 +377,192 @@ class Game:
         self.obstacle_turtles = []
         self.border_turtle.clear()
         self.grid_turtle.clear()
+
+def show_main_menu(self):
+        """显示主菜单"""
+        self.clear_buttons()
+        self.clear_game_objects()
+        self.clear_all_turtles()
+        
+        self.game_mode = None
+        self.current_level = 0
+        
+        self.screen.bgcolor(BG_COLOR)
+        
+        # 绘制标题
+        title = turtle.Turtle()
+        title.speed(0)
+        title.color("#FFFFFF")
+        title.penup()
+        title.hideturtle()
+        title.goto(0, 150)
+        title.write("🐍 贪吃蛇游戏 🐍", align="center", font=("微软雅黑", 36, "bold"))
+        
+        # 创建按钮
+        canvas = self.screen.getcanvas()
+        root = canvas.winfo_toplevel()
+        
+        # 无尽模式按钮
+        endless_btn = tk.Button(root, text="🎯 无尽模式", bg="#2ECC71", fg="white",
+                              font=("微软雅黑", 14, "bold"), width=18, height=2,
+                              command=self.start_endless_mode)
+        canvas.create_window(0, 30, window=endless_btn)
+        self.menu_buttons.append(endless_btn)
+        
+        # 关卡模式按钮
+        level_btn = tk.Button(root, text="📋 关卡模式", bg="#3498DB", fg="white",
+                             font=("微软雅黑", 14, "bold"), width=18, height=2,
+                             command=self.show_level_select)
+        canvas.create_window(0, -40, window=level_btn)
+        self.menu_buttons.append(level_btn)
+        
+        # 退出按钮
+        exit_btn = tk.Button(root, text="❌ 退出游戏", bg="#E74C3C", fg="white",
+                           font=("微软雅黑", 14, "bold"), width=18, height=2,
+                           command=self.exit_game)
+        canvas.create_window(0, -110, window=exit_btn)
+        self.menu_buttons.append(exit_btn)
+        
+        # 底部提示
+        hint = turtle.Turtle()
+        hint.speed(0)
+        hint.color("#95A5A6")
+        hint.penup()
+        hint.hideturtle()
+        hint.goto(0, -200)
+        hint.write("🎮 点击按钮选择模式", align="center", font=("微软雅黑", 12, "normal"))
+        
+        self.screen.update()
+    
+    def start_endless_mode(self):
+        """开始无尽模式（手动触发开始）"""
+        self.clear_buttons()
+        self.clear_all_turtles()
+        self.game_mode = "endless"
+        
+        # 初始化游戏对象（使用30x30大地图）
+        self.init_game_objects(30, 30)
+        
+        # 等待用户按键开始
+        self.waiting_for_start = True
+        self.show_game_ui()
+    
+    def start_level(self, level_num):
+        """开始指定关卡（手动触发开始）"""
+        self.clear_buttons()
+        self.clear_all_turtles()
+        self.game_mode = "level"
+        self.current_level = level_num
+        level = self.levels[level_num]
+        
+        # 初始化游戏对象
+        grid_width = level["grid_width"]
+        grid_height = level["grid_height"]
+        self.init_game_objects(grid_width, grid_height)
+        
+        # 生成障碍物
+        if level.get("random_obstacles"):
+            self.generate_random_obstacles(grid_width, grid_height)
+        else:
+            for obs in level["obstacles"]:
+                self.create_obstacle(obs[0], obs[1], grid_width, grid_height)
+        
+        # 设置速度
+        self.speed_multiplier = level["speed_multiplier"]
+        
+        # 等待用户按键开始
+        self.waiting_for_start = True
+        self.show_game_ui()
+    
+    def show_level_select(self):
+        """显示关卡选择界面（优化排版）"""
+        self.clear_buttons()
+        self.clear_game_objects()
+        self.clear_all_turtles()
+        
+        self.screen.bgcolor(BG_COLOR)
+        
+        # 创建返回按钮
+        canvas = self.screen.getcanvas()
+        root = canvas.winfo_toplevel()
+        
+        back_btn = tk.Button(root, text="← 返回主菜单", bg="#7F8C8D", fg="white",
+                           font=("微软雅黑", 12, "bold"), width=12, height=1,
+                           command=self.show_main_menu)
+        canvas.create_window(-250, -260, window=back_btn)
+        self.menu_buttons.append(back_btn)
+        
+        # 显示标题
+        title = turtle.Turtle()
+        title.speed(0)
+        title.color("#FFFFFF")
+        title.penup()
+        title.hideturtle()
+        title.goto(0, 200)
+        title.write("📋 选择关卡", align="center", font=("微软雅黑", 28, "bold"))
+        
+        # 显示关卡列表（优化布局）
+        y_start = 150
+        
+        # 创建关卡顺序映射（交换按钮功能：1号↔4号，2号↔3号）
+        # 按钮显示位置与关卡名称对齐，但点击后启动交换后的关卡
+        swap_mapping = {1: 4, 2: 3, 3: 2, 4: 1}
+        
+        for level_num in range(1, 5):
+            level = self.levels[level_num]
+            y_pos = y_start - (level_num - 1) * 85
+            
+            # 关卡名称
+            level_text = turtle.Turtle()
+            level_text.speed(0)
+            unlocked = level_num in self.unlocked_levels
+            level_text.color("#FFFFFF" if unlocked else "#7F8C8D")
+            level_text.penup()
+            level_text.hideturtle()
+            level_text.goto(-180, y_pos)
+            
+            lock_icon = "" if unlocked else "🔒 "
+            level_text.write(f"{lock_icon}{level['name']}", align="left", font=("微软雅黑", 18, "bold"))
+            
+            # 关卡描述
+            desc_text = turtle.Turtle()
+            desc_text.speed(0)
+            desc_text.color("#95A5A6" if unlocked else "#7F8C8D")
+            desc_text.penup()
+            desc_text.hideturtle()
+            desc_text.goto(-180, y_pos - 22)
+            desc_text.write(f"   {level['description']}", align="left", font=("微软雅黑", 11, "normal"))
+            
+            # 关卡信息
+            info_text = turtle.Turtle()
+            info_text.speed(0)
+            info_text.color("#BDC3C7" if unlocked else "#7F8C8D")
+            info_text.penup()
+            info_text.hideturtle()
+            info_text.goto(-180, y_pos - 40)
+            info_text.write(f"   🎯 目标: {level['target_score']}分 | ⚡ 速度: {level['speed_multiplier']}x", 
+                          align="left", font=("微软雅黑", 10, "normal"))
+            
+            # 关卡按钮（与关卡名称对齐，但功能交换）
+            # 检查交换后的关卡是否解锁
+            target_level = swap_mapping[level_num]
+            target_unlocked = target_level in self.unlocked_levels
+            
+            if target_unlocked:
+                # 使用默认参数解决闭包问题
+                def make_start_func(n):
+                    return lambda: self.start_level(n)
+                
+                level_btn = tk.Button(root, text=f"开始", bg="#3498DB", fg="white",
+                                     font=("微软雅黑", 11, "bold"), width=8, height=1,
+                                     command=make_start_func(target_level))
+                # 按钮y坐标往上移动5像素，与关卡名称更好地对齐
+                canvas.create_window(180, y_pos + 5, window=level_btn)
+                self.menu_buttons.append(level_btn)
+            else:
+                locked_label = tk.Label(root, text="🔒 未解锁", bg="#7F8C8D", fg="white",
+                                       font=("微软雅黑", 11, "bold"), width=8, height=1)
+                canvas.create_window(180, y_pos + 5, window=locked_label)
+                self.menu_buttons.append(locked_label)
+        
+        self.screen.update()
